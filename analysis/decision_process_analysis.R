@@ -184,6 +184,7 @@ tp_prop <- df %>%
   select(IV_mem_strength, id_decision) %>%
   table %>% # turn it into a table
   addmargins(1) # add margins to figure out the ns for each memory strength
+# [remove 1 to get ns for the rows] , but delete it for the actual analysis
 
 # proportions of id decisions for each memory strength conditions plus overall
 prop.table(tp_prop,1) %>%
@@ -199,5 +200,30 @@ chisq.posthoc.test(tp_lab) # this gives the same values as the follow-up z tests
 
 # [breadcrumb: I need to build my tables for each of the id decisions & then
  # use the odds ratio code]
+
+# select Target Absent Data [cannot use _lab data for prop tables] &
+# then turn it into a table
+
+ta_prop <- df %>%
+  filter(IV_target_presence_lab == 'target absent') %>%
+  select(IV_mem_strength, id_decision) %>%
+  table %>% # turn it into a table
+  addmargins(1)  # add margins to figure out the ns for each memory strength
+# [remove 1 to get ns for the rows] , but delete it for the actual analysis
+
+# proportions of id decisions for each memory strength conditions plus overall]
+prop.table(ta_prop,1) %>%
+  round(2) # round to two digits
+
+ta_lab <- df %>%
+  filter(IV_target_presence_lab == 'target absent') %>%
+  select(IV_mem_strength_lab, id_decision_lab) %>%
+  table
+
+chisq.test(ta_lab)
+chisq.posthoc.test(ta_lab) # this gives the same values as the follow-up z tests
+
+# [breadcrumb: I need to build my tables for each of the id decisions & then
+# use the odds ratio code]
 
 
