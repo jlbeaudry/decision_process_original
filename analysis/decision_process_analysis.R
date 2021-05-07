@@ -176,18 +176,20 @@ cohens_d(distance ~IV_mem_strength_lab,
 
 ##### IDENTIFICATION DECISIONS #####
 
+# TARGET PRESENT #
   # select Target Present Data [cannot use _lab data for prop tables] &
   # then turn it into a table
 
-tp_prop <- df %>%
+tp_num <- df %>%
   filter(IV_target_presence_lab == 'target present') %>%
   select(IV_mem_strength, id_decision) %>%
   table %>% # turn it into a table
-  addmargins(1) # add margins to figure out the ns for each memory strength
-# [remove 1 to get ns for the rows] , but delete it for the actual analysis
+  addmargins(1)  # add margins to figure out the ns for each memory strength
+
+tp_num %>% addmargins(2) # use this to get ns for the rows, but don't use it for the actual analysis
 
 # proportions of id decisions for each memory strength conditions plus overall
-prop.table(tp_prop,1) %>%
+prop.table(tp_num,1) %>%
   round(2) # round to two digits
 
 tp_lab <- df %>%
@@ -195,11 +197,31 @@ tp_lab <- df %>%
   select(IV_mem_strength_lab, id_decision_lab) %>%
   table
 
-chisq.test(tp_lab)
+chisq.test(tp_lab) # use the n value from prop_table
 chisq.posthoc.test(tp_lab) # this gives the same values as the follow-up z tests
 
-# [breadcrumb: I need to build my tables for each of the id decisions & then
- # use the odds ratio code]
+# Build tables for each of the id decisions & then calculate the odds ratios
+
+# suspect id
+S <- as.table(rbind(c(tp_num[1,2],(tp_num[1,1]+tp_num[1,3])), c(tp_num[2,2],(tp_num[2,1]+tp_num[2,3]))))
+dimnames(S) <- list ("memory strength" = c("weak", "strong"),
+                     "ID Decision" = c("suspect", "not suspect"))
+oddsratio.wald(S, rev = "rows") #use 'rev' to change the reference value so the OR value is > 1
+
+# filler id
+F <- as.table(rbind(c(tp_num[1,3],(tp_num[1,1]+tp_num[1,2])), c(tp_num[2,3],(tp_num[2,1]+tp_num[2,2]))))
+dimnames(F) <- list ("memory strength" = c("weak", "strong"),
+                     "ID Decision" = c("filler", "not filler"))
+oddsratio.wald(F) #use 'rev' to change the reference value so the OR value is > 1
+
+# rejections
+R <- as.table(rbind(c(tp_num[1,1],(tp_num[1,2]+tp_num[1,3])), c(tp_num[2,1],(tp_num[2,2]+tp_num[2,3])))) # build 2 x 2 tables from P
+dimnames(R) <- list ("memory strength" = c("weak", "strong"),
+                     "ID Decision" = c("rejection", "not rejection"))
+oddsratio.wald(R)
+
+
+# TARGET ABSENT #
 
 # select Target Absent Data [cannot use _lab data for prop tables] &
 # then turn it into a table
@@ -209,7 +231,8 @@ ta_prop <- df %>%
   select(IV_mem_strength, id_decision) %>%
   table %>% # turn it into a table
   addmargins(1)  # add margins to figure out the ns for each memory strength
-# [remove 1 to get ns for the rows] , but delete it for the actual analysis
+
+ta_prop %>% addmargins(2) # use this to get ns for the rows, but don't use it for the actual analysis
 
 # proportions of id decisions for each memory strength conditions plus overall]
 prop.table(ta_prop,1) %>%
@@ -220,10 +243,8 @@ ta_lab <- df %>%
   select(IV_mem_strength_lab, id_decision_lab) %>%
   table
 
-chisq.test(ta_lab)
-chisq.posthoc.test(ta_lab) # this gives the same values as the follow-up z tests
+chisq.test(ta_lab) # use the n value from prop_table
+# no need for follow up tests
 
-# [breadcrumb: I need to build my tables for each of the id decisions & then
-# use the odds ratio code]
 
 
