@@ -5,9 +5,16 @@
 library(here)
 library(box)
 library(tidyverse)
+library(magrittr)
 library(effectsize) # for eta & Cohen's d with CIs
 library(chisq.posthoc.test) # for chi-square
-library(epitools) # presumably for OR?
+library(epitools) # for OR
+library(psych) # from Jam's code - why
+library(corpcor) # from Jam's code - why
+library(GPArotation) # from Jam's code - why
+library(lavaan) # from Jam's code - why
+library(semTools) # from Jam's code - why
+library(semPlot) # from Jam's code - why
 box::use(plyr[mapvalues]) #use mapvalues from plyr without installing full package
 
 ##### LOAD DATA #####
@@ -244,7 +251,91 @@ ta_lab <- df %>%
   table
 
 chisq.test(ta_lab) # use the n value from prop_table
-# no need for follow up tests
+# no need for follow up tests because no sig differences
 
 
+##### EXPLORATORY FACTOR ANALYSIS #####
 
+# create dataframes for relevant variables for choosers only
+  # decision process items
+dp <- df %>%
+  filter(id_decision_lab != "reject") %>%
+  select(c(id,ease:plausible))
+
+  # absolute vs. relative item
+absrel <- df %>%
+  filter(id_decision_lab != "reject") %>%
+  select(c(id, absrel))
+
+# Step 1: check for and delete missing values
+sapply(dp, function(x) sum(is.na(x)))
+dp %<>% drop_na
+  # only 1 missing for mem variable in dp df
+
+sapply(absrel, function(x) sum(is.na(x)))
+absrel %<>% drop_na
+  # only 1 missing for absrel df
+
+
+# Step 2a: check if variables are normally distributed (univariate) - not required but helps
+hist_dp <- dp %>%
+  select(-c(id)) %>%
+  gather() %>%
+  ggplot(aes(value)) +
+  geom_histogram(bins=6)+
+  facet_wrap(~key, scales = 'free_x')
+
+hist_dp
+
+  # negatively skewed variables: mem, familiar, remembered, compared
+  # positively skewed variables: poppedout, easily, knew, confirm, confused,
+    # plausible
+  # negative kurtosis: eliminated
+
+hist_absrel <- absrel %>%
+  select(-c(id)) %>%
+  gather() %>%
+  ggplot(aes(value)) +
+  geom_histogram(bins=6)+
+  facet_wrap(~key, scales = 'free_x')
+
+hist_absrel
+
+  # positively skewed: absrel
+
+# Step 2b: Attempt to transform variables (see Tabachnik & Fiddel, p. 86)
+
+  # for those positively skewed, use log transformation
+dp_trans <- dp %>%
+  mutate(
+    popedout_log = log(poppedout),
+    easily_log = log(easily),
+    knew_log = log(knew),
+    confirm_log = log(confirm),
+    confused_log = log(confused),
+    plausible_log = log(plausible)
+  )
+
+  # for those negatively skewed, first reflect, then use log transformation
+# figure out max score for each variable [all had 7s]
+dp %>%
+  select(c(mem, familiar,remembered,compared)) %>%
+  sapply(function (x) max(x))
+
+# [breadcrumb: will need to reflect the variables and then log transform]
+dp_trans <- dp %>%
+  mutate(
+    mem_log = log(mem_r),
+    familiar_log = log(familiar_r),
+    remembered_log = log(remembered_r),
+    compared_log = log(compared_r)
+  )
+
+hist_trans_dp <- dp_trans %>%
+  select(-c(id)) %>%
+  gather() %>%
+  ggplot(aes(value)) +
+  geom_histogram(bins=6)+
+  facet_wrap(~key, scales = 'free_x')
+
+hist_trans_dp
