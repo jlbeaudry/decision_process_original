@@ -9,7 +9,7 @@ library(magrittr)
 library(effectsize) # for eta & Cohen's d with CIs
 library(chisq.posthoc.test) # for chi-square
 library(epitools) # for OR
-library(psych) # from Jam's code - why
+library(psych) # from Jam's code - check distribution
 library(corpcor) # from Jam's code - why
 library(GPArotation) # from Jam's code - why
 library(lavaan) # from Jam's code - why
@@ -278,6 +278,11 @@ absrel %<>% drop_na
 
 
 # Step 2a: check if variables are normally distributed (univariate) - not required but helps
+
+# get info about skewness (should be 0) and kurtosis (should be < 3)
+describe(dp)
+
+# visualise the data
 hist_dp <- dp %>%
   select(-c(id)) %>%
   gather() %>%
@@ -287,17 +292,16 @@ hist_dp <- dp %>%
 
 hist_dp
 
+
   # negatively skewed variables: mem, familiar, remembered, compared
-  # positively skewed variables: poppedout, easily, knew, confirm, confused,
+  # positively skewed variables: poppedout, easily, knew, clues, confused,
     # plausible
-  # negative kurtosis: eliminated
+  # negative kurtosis: eliminated & standout
 
 hist_absrel <- absrel %>%
   select(-c(id)) %>%
-  gather() %>%
-  ggplot(aes(value)) +
-  geom_histogram(bins=6)+
-  facet_wrap(~key, scales = 'free_x')
+  ggplot(aes(absrel)) +
+  geom_histogram(bins=6)
 
 hist_absrel
 
@@ -305,15 +309,21 @@ hist_absrel
 
 # Step 2b: Attempt to transform variables (see Tabachnik & Fiddel, p. 86)
 
-  # for those positively skewed, use log transformation
+# [breadcrum: work on this later. I'm wasting a lot of time trying to find the
+  # best transformation]
+
+  # need to look at different transformations for the various items
 dp_trans <- dp %>%
   mutate(
     popedout_log = log(poppedout),
-    easily_log = log(easily),
-    knew_log = log(knew),
-    confirm_log = log(confirm),
-    confused_log = log(confused),
-    plausible_log = log(plausible)
+    easily_log10 = log10(easily),
+    knew_log10 = log10(knew),
+    clues_log10 = log10(clues),
+    clues_sqrt = sqrt(clues),
+    clues_inv = (1/clues),
+    confused_log10 = log10(confused),
+    plausible_log10 = log10(plausible),
+    eliminated_log10 = log10(eliminated)
   )
 
   # for those negatively skewed, first reflect, then use log transformation
@@ -322,10 +332,17 @@ dp %>%
   select(c(mem, familiar,remembered,compared)) %>%
   sapply(function (x) max(x))
 
+# reflect the variable
+
+# dp %<>%
+#   mutate(
+#     mem_r = ((7 - mem)+1)
+#   )
+
 # [breadcrumb: will need to reflect the variables and then log transform]
 dp_trans <- dp %>%
   mutate(
-    mem_log = log(mem_r),
+    mem_log = log2(mem_r))
     familiar_log = log(familiar_r),
     remembered_log = log(remembered_r),
     compared_log = log(compared_r)
@@ -336,6 +353,21 @@ hist_trans_dp <- dp_trans %>%
   gather() %>%
   ggplot(aes(value)) +
   geom_histogram(bins=6)+
-  facet_wrap(~key, scales = 'free_x')
+  facet_wrap(~key) # fix the scales to 0 to 8 so it's easier to see shape
 
 hist_trans_dp
+
+# Step 3: Check for pairwise linearity
+
+#skewness in histograms suggest there may be
+#curvilinear relationships between vars
+#check worst case scenario by doing scatterplot for most skewed variables
+  # familiar & easily
+
+dp %>%
+  ggplot(aes(x = familiar, y = easily))+
+  geom_point()+
+  geom_smooth(method="loess")+
+  geom_smooth(method="lm")
+#may be some weak non-linearity here judging by best-fitting line (geom_smooth)
+#but seems  minimal
